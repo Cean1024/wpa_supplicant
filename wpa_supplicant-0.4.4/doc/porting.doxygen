@@ -1,0 +1,85 @@
+/**
+\page porting Porting to different target boards and operating systems
+
+%wpa_supplicant was designed to be easily portable to different
+hardware (board, CPU) and software (OS, drivers) targets. It is
+already used with number of operating systems and numerous wireless
+card models and drivers. The main %wpa_supplicant repository includes
+support for Linux, FreeBSD, and Windows. In addition, at least VxWorks
+and PalmOS are supported in separate repositories. On the hardware
+side, %wpa_supplicant is used on various systems: desktops, laptops,
+PDAs, and embedded devices with CPUs including x86, PowerPC,
+arm/xscale, and MIPS. Both big and little endian configurations are
+supported.
+
+
+\section driver_iface_porting Driver interface
+
+Unless the target OS and driver is already supported, most porting
+projects have to implement a driver wrapper. This may be done by
+adding a new driver interface module or modifying an existing module
+(driver_*.c) if the new target is similar to one of them. \ref
+driver_wrapper "Driver wrapper implementation" describes the details
+of the driver interface and discusses the tasks involved in porting
+this part of %wpa_supplicant.
+
+
+\section l2_packet_porting l2_packet (link layer access)
+
+%wpa_supplicant needs to have access to sending and receiving layer 2
+(link layer) packets with two Ethertypes: EAP-over-LAN (EAPOL) 0x888e
+and RSN pre-authentication 0x88c7. l2_packet.h defines the interfaces
+used for this in the core %wpa_supplicant implementation.
+
+If the target operating system supports a generic mechanism for link
+layer access, that is likely the best mechanism for providing the
+needed functionality for %wpa_supplicant. Linux packet socket is an
+example of such a generic mechanism. If this is not available, a
+separate interface may need to be implemented to the network stack or
+driver. This is usually an intermediate or protocol driver that is
+operating between the device driver and the OS network stack. If such
+a mechanism is not feasible, the interface can also be implemented
+directly in the device driver.
+
+The main %wpa_supplicant repository includes l2_packet implementations
+for Linux using packet sockets (l2_packet_linux.c), more portable
+version using libpcap/libdnet libraries (l2_packet_pcap.c; this
+supports WinPcap, too), and FreeBSD specific version of libpcap
+interface (l2_packet_freebsd.c).
+
+If the target operating system is supported by libpcap (receiving) and
+libdnet (sending), l2_packet_pcap.c can likely be used with minimal or
+no changes. If this is not a case or a proprietary interface for link
+layer is required, a new l2_packet module may need to be
+added. Alternatively, struct wpa_driver_ops::send_eapol() handler can
+be used to override the l2_packet library if the link layer access is
+integrated with the driver interface implementation.
+
+
+\section eloop_porting Event loop
+
+%wpa_supplicant uses a single process/thread model and an event loop
+to provide callbacks on events (registered timeout, received packet,
+signal). eloop.h defines the event loop interface. eloop.c is an
+implementation of such an event loop using select() and sockets. This
+is suitable for most UNIX/POSIX systems. When porting to other
+operating systems, it may be necessary to replace that implementation
+with OS specific mechanisms that provide similar functionality.
+
+
+\section ctrl_iface_porting Control interface
+
+%wpa_supplicant uses a control interface to allow external processed
+to get status information and to control the operations. Currently,
+this is implemented with socket based communication; both UNIX domain
+sockets and UDP sockets are supported. If the target OS does not
+support sockets, this interface will likely need to be modified to use
+another mechanism like message queues. The control interface is
+optional component, so it is also possible to run %wpa_supplicant
+without porting this part.
+
+The %wpa_supplicant side of the control interface is implemented in
+ctrl_iface.c. Matching client side is implemented as a control
+interface library in wpa_ctrl.c.
+
+*/
