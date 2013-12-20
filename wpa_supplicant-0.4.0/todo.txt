@@ -1,0 +1,82 @@
+To do:
+- add support for other drivers
+- implement GUI for WPA Supplicant/Xsupplicant/iwconfig/iwlist
+  (easy to use configuration and network stats, etc.)
+- hostap: try other roaming modes
+  NOTE: current mode (manual roaming) does not really roam at all..
+  Firmware did not notice the current AP disappearing..
+- EAP-MSCHAPv2: add support for password changing
+- add support for WPA with ap_scan=0 (update selected cipher etc. based on
+  AssocInfo; make sure these match with configuration)
+- wpa_supplicant.conf g+rw so that frontend can change wpa_supplicant.conf
+  and RECONFIG wpa_supplicant  (?)
+	(or wpa_supplicant changes .conf and ctrl interface gets support for
+	changing config?)
+- optional security separation (build time option): run EAPOL state machines
+  as non-root (need to add something like socketpair between privileged root
+  process and non-root handler; send EAPOL packets between processes
+  and send keying data from non-root -> privileged)
+  EAPOL-Key processing (WPA & WEP keys) could be in privileged part
+  at least in the beginning; some parts might end up being moved to
+  non-root part eventually
+- consider closing smart card / PCSC connection when EAP-SIM/EAP-AKA
+  authentication has been completed (cache scard data based on serial#(?)
+  and try to optimize next connection if the same card is present for next
+  auth)
+- EAP-AKA: AT_CHECKCODE
+- EAP-SIM/AKA: AT_RESULT_IND
+- abort auth if EAP method initialization fails and there no other
+  accepted methods (i.e., do not send NAK for the same method that just
+  failed)
+- on disconnect event, could try to associate with another AP if one is
+  present in scan results; would need to update scan results periodically..
+- add flag scan_requested and only try to re-associate if this is set when
+  new scan results are received; this would allow background scans without
+  triggering re-assoc..
+- if driver/hw is not WPA2 capable, must remove WPA_PROTO_RSN flag from
+  ssid->proto fields to avoid detecting downgrade attacks when the driver
+  is not reporting RSN IE, but msg 3/4 has one
+- read CA certs from PFX file
+- EAP-SIM/AKA: if SIM reader initialization fails, do not start authentication
+- Cisco AP and non-zero keyidx for unicast -> map to broadcast
+  (actually, this already works with driver_ndis; so maybe just change
+  driver_*.c to do the mapping for drivers that cannot handle non-zero keyidx
+  for unicast); worked also with Host AP driver and madwifi
+- IEEE 802.1X and key update with driver_ndis?? wpa_supplicant did not seem
+  to see unencrypted EAPOL-Key frames at all..
+- driver_wext.c and driver that does not support WPA -> fix plaintext, WEP, and
+  IEEE 802.1X operation (e.g., use capabilities to report no support for WPA)
+- struct wpa_eapol_key: key_info, key_length, and key_data_length are not
+  16-bit aligned; should some special code be added to process them??
+- -Dwired: if ssid is set in network block, authentication gets "stuck" since
+  driver_wired.c only reports empty SSID and association is not assumed to be
+  ok
+- verify that wpa_supplicant replies to correct target address if EAPOL
+  packets are received from another address than the current BSSID;
+  note: this changes AA for PTK derivation
+  AA = IEEE 802.1X Authenticator MAC address; no strict requirement of this
+  being BSSID.. wpa_supplicant should probably just use the src addr of the
+  last EAPOL frame as the destination address for future EAPOL frames; the
+  first EAPOL-Start would be sent using the current BSSID as the dst addr
+  (actually, the current implementation is already doing this for PMK->PTK
+  derivation; the only open question is in the dst addr for EAPOL frames
+  NOTE: actually, both Microsoft supplicant (WinXP SP2 + WPA2 beta) and Funk
+  Odyssey Client send EAPOL packets to BSSID address even when they EAPOL
+  packets from the Authenticator came from different address, i.e.,
+  wpa_supplicant behavior is matching with them and should probably not be
+  changed
+- EAP-PAX with PAX_SEC
+- PMKSA cache entry expiration -> force reauth if PMK from the entry was
+  currently in use
+- add wpa_cli commands 'enable' / 'disable' network, make this also
+  configurable through wpa_supplicant.conf (disabled=1 in network block);
+  make network selection skip disabled networks; allow configuration that does
+  not have any enabled networks (or no networks); just wait for config changes
+  in this case
+- add wpa_cli commands for adding new networks and setting security parameters
+  for the networks
+- add 'wpa_cli scan' to request a scan
+- add 'wpa_cli scanresults' to fetch scan results (from previous scan; does
+  not require new 'wpa_cli scan')
+- ndis_events was reported not to work on Win2k; SENS should work:
+  http://msdn.microsoft.com/msdnmag/issues/02/08/SENS/default.aspx
