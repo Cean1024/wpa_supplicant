@@ -1,0 +1,3 @@
+#!/bin/bash
+
+./wpa_supplicant -D ipw -c wpa1.conf -i wlan0 -dd&
